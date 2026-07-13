@@ -1,46 +1,36 @@
-/**
- * LCMS Design Bible v1.0 — token source of truth.
- * No component may hardcode a hex value; import from here (Rule: No magic numbers).
- */
-export const LightTheme = {
-  primary: "#0E5A9C",
-  primaryDark: "#0A4478",
-  primaryLight: "#EAF2FA",
-  secondary: "#F59E42",
-  secondaryLight: "#FEF3E7",
-  success: "#22C55E",
-  successLight: "#EAFBF0",
-  warning: "#FACC15",
-  warningLight: "#FEFAE6",
-  danger: "#EF4444",
-  dangerLight: "#FDEDED",
-  info: "#7C3AED",
-  infoLight: "#F3EBFD",
-  background: "#F8FAFC",
-  card: "#FFFFFF",
-  border: "#E5E7EB",
-  textPrimary: "#1F2937",
-  textSecondary: "#6B7280",
-} as const;
+import React from "react";
+import { LightTheme, DarkTheme, ThemeMode } from "@/constants/design-tokens.constants";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { SocialResearch } from "../types/socialResearch.types";
+import { RESEARCH_STATUS_LABELS_AR, RESEARCH_STATUS_TONE } from "../constants/socialResearch.constants";
 
-export const DarkTheme = {
-  ...LightTheme,
-  background: "#0F1720",
-  card: "#17212C",
-  border: "#28323C",
-  textPrimary: "#F1F5F9",
-  textSecondary: "#94A3B8",
-  primaryLight: "#152C42",
-  secondaryLight: "#3A2A17",
-  successLight: "#123424",
-  warningLight: "#33290E",
-  dangerLight: "#3A1A1A",
-  infoLight: "#241B3A",
-} as const;
+export interface ResearchCardProps {
+  theme: ThemeMode;
+  research: SocialResearch;
+  onClick?: (research: SocialResearch) => void;
+}
 
-export type ThemeTokens = typeof LightTheme;
-export type ThemeMode = "light" | "dark";
-
-export const RADIUS = { button: 12, card: 16, dialog: 20, input: 10 } as const;
-export const SPACING_GRID = 8;
-export const TRANSITION_MS = 200;
+export function ResearchCard({ theme, research, onClick }: ResearchCardProps): JSX.Element {
+  const tokens = theme === "dark" ? DarkTheme : LightTheme;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick?.(research)}
+      className="text-right rounded-2xl border p-4 flex flex-col gap-2 w-full transition-transform hover:-translate-y-0.5"
+      style={{ background: tokens.card, borderColor: tokens.border }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold" style={{ color: tokens.textSecondary }}>{research.code}</span>
+        <StatusBadge
+          label={RESEARCH_STATUS_LABELS_AR[research.approvalStatus]}
+          tone={RESEARCH_STATUS_TONE[research.approvalStatus]}
+          theme={theme}
+        />
+      </div>
+      <div className="font-bold" style={{ color: tokens.textPrimary }}>حالة {research.caseCode}</div>
+      <div className="text-xs" style={{ color: tokens.textSecondary }}>
+        الإصدار رقم {research.version} · الباحث: {research.researcherName}
+      </div>
+    </button>
+  );
+}

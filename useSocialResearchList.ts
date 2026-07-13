@@ -1,14 +1,13 @@
-export * from "./types/socialResearch.types";
-export * from "./constants/socialResearch.constants";
-export * from "./validation/socialResearch.validation";
-export * from "./services/socialResearch.repository";
-export * from "./services/socialResearch.service";
-export * from "./hooks/useSocialResearchList";
-export * from "./hooks/useSocialResearch";
-export * from "./hooks/useSocialResearchMutations";
-export * from "./components/ResearchCard";
-export * from "./components/ResearchForm";
-export * from "./components/ResearchApprovalPanel";
-export * from "./pages/SocialResearchListPage";
-export * from "./pages/SocialResearchFormPage";
-export * from "./pages/SocialResearchDetailsPage";
+import { useQuery } from "@tanstack/react-query";
+import { ListQuery } from "@/types/common.types";
+import { socialResearchService } from "../services/socialResearch.service";
+
+export const SOCIAL_RESEARCH_QUERY_KEY = "social-research" as const;
+
+export function useSocialResearchList(query: ListQuery & { caseCode?: string; status?: string }) {
+  return useQuery({
+    queryKey: [SOCIAL_RESEARCH_QUERY_KEY, query],
+    queryFn: () => socialResearchService.list(query),
+    staleTime: 30_000,
+  });
+}

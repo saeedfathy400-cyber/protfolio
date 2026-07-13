@@ -1,29 +1,16 @@
-import { z } from "zod";
-import { ResearchApprovalStatus } from "../constants/socialResearch.constants";
+import { ListQuery, PagedResult } from "@/types/common.types";
+import { Visit } from "../types/visit.types";
 
-const MIN_SECTION_LENGTH = 15;
-
-export const createSocialResearchSchema = z.object({
-  caseCode: z.string().min(1, "كود الحالة إلزامي"),
-  sourceVisitCode: z.string().min(1, "لا يمكن إنشاء بحث اجتماعي بدون زيارة مكتملة"),
-  incomeAnalysis: z.string().min(MIN_SECTION_LENGTH, "تحليل الدخل مطلوب بتفصيل كافٍ"),
-  expensesAnalysis: z.string().min(MIN_SECTION_LENGTH, "تحليل المصروفات مطلوب بتفصيل كافٍ"),
-  housingCondition: z.string().min(MIN_SECTION_LENGTH, "وصف حالة السكن مطلوب"),
-  healthAssessment: z.string().min(MIN_SECTION_LENGTH, "التقييم الصحي مطلوب"),
-  educationAssessment: z.string().min(MIN_SECTION_LENGTH, "التقييم التعليمي مطلوب"),
-  recommendation: z.string().min(MIN_SECTION_LENGTH, "التوصية النهائية مطلوبة"),
-});
-
-export type CreateSocialResearchFormValues = z.infer<typeof createSocialResearchSchema>;
-
-export const reviewSocialResearchSchema = z.object({
-  researchCode: z.string().min(1),
-  decision: z.enum([
-    ResearchApprovalStatus.Approved,
-    ResearchApprovalStatus.RevisionRequested,
-    ResearchApprovalStatus.Rejected,
-  ]),
-  reviewNotes: z.string().min(10, "يجب توضيح سبب القرار في 10 أحرف على الأقل"),
-});
-
-export type ReviewSocialResearchFormValues = z.infer<typeof reviewSocialResearchSchema>;
+/**
+ * Repository contract. This is the ONLY boundary the rest of the app talks
+ * to. Today `MockVisitRepository` implements it against in-memory fake data.
+ * Sprint 10 (Firebase Integration) adds `FirestoreVisitRepository` that
+ * implements the same interface against Firestore — zero changes required
+ * in hooks, pages, or components.
+ */
+export interface IVisitRepository {
+  list(query: ListQuery & { caseCode?: string; status?: string }): Promise<PagedResult<Visit>>;
+  getByCode(visitCode: string): Promise<Visit | null>;
+  create(visit: Visit): Promise<Visit>;
+  update(visitCode: string, changes: Partial<Visit>): Promise<Visit>;
+}

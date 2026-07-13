@@ -1,94 +1,104 @@
 import React from "react";
-import { ArrowRight } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { LightTheme, DarkTheme, ThemeMode } from "@/constants/design-tokens.constants";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { useSocialResearch, useSocialResearchVersionHistory } from "../hooks/useSocialResearch";
-import { useReviewSocialResearch } from "../hooks/useSocialResearchMutations";
-import { ResearchApprovalPanel } from "../components/ResearchApprovalPanel";
-import { RESEARCH_STATUS_LABELS_AR, RESEARCH_STATUS_TONE, ResearchApprovalStatus } from "../constants/socialResearch.constants";
+import { submitVisitReportSchema, SubmitVisitReportFormValues } from "../validation/visit.validation";
 
-export interface SocialResearchDetailsPageProps {
+export interface VisitReportFormProps {
   theme: ThemeMode;
-  researchCode: string;
-  onBack: () => void;
+  onSubmit: (values: SubmitVisitReportFormValues) => void;
+  isSubmitting?: boolean;
 }
 
-const SECTIONS: { key: keyof import("../types/socialResearch.types").SocialResearch; label: string }[] = [
-  { key: "incomeAnalysis", label: "تحليل الدخل" },
-  { key: "expensesAnalysis", label: "تحليل المصروفات" },
-  { key: "housingCondition", label: "حالة السكن" },
-  { key: "healthAssessment", label: "التقييم الصحي" },
-  { key: "educationAssessment", label: "التقييم التعليمي" },
-  { key: "recommendation", label: "التوصية النهائية" },
+const ELIGIBILITY_OPTIONS: SubmitVisitReportFormValues["eligibilityAssessment"][] = [
+  "مستحق",
+  "مستحق جزئيًا",
+  "غير مستحق",
 ];
 
-export function SocialResearchDetailsPage({ theme, researchCode, onBack }: SocialResearchDetailsPageProps): JSX.Element {
+/**
+ * Visit Report form (Business Process, Stage 6). Submitting this form always
+ * completes the visit and unlocks Social Research creation for the case —
+ * see VisitService.submitReport.
+ */
+export function VisitReportForm({ theme, onSubmit, isSubmitting }: VisitReportFormProps): JSX.Element {
   const tokens = theme === "dark" ? DarkTheme : LightTheme;
-  const { data: research, isLoading } = useSocialResearch(researchCode);
-  const { data: versions } = useSocialResearchVersionHistory(research?.caseCode);
-  const review = useReviewSocialResearch();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SubmitVisitReportFormValues>({
+    resolver: zodResolver(submitVisitReportSchema),
+    defaultValues: { photoUrls: [] },
+  });
 
-  if (isLoading) return <div className="py-10 text-center text-sm" style={{ color: tokens.textSecondary }}>جارٍ التحميل...</div>;
-  if (!research) return <div className="py-10 text-center text-sm" style={{ color: tokens.textSecondary }}>لم يتم العثور على البحث الاجتماعي.</div>;
+  const fieldStyle: React.CSSProperties = {
+    background: theme === "dark" ? tokens.background : "#FFFFFF",
+    color: tokens.textPrimary,
+    border: `1px solid ${tokens.border}`,
+  };
 
-  const isReviewable =
-    research.approvalStatus === ResearchApprovalStatus.Submitted ||
-    research.approvalStatus === ResearchApprovalStatus.UnderReview;
+  function renderError(message?: string): JSX.Element | null {
+    return message ? (
+      <p role="alert" className="text-xs mt-1" style={{ color: tokens.danger }}>{message}</p>
+    ) : null;
+  }
 
   return (
-    <div className="flex flex-col gap-5">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm font-semibold w-fit" style={{ color: tokens.primary }}>
-        <ArrowRight size={16} /> العودة لقائمة الأبحاث
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      <div>
+        <label htmlFor="location" className="text-sm font-semibold block mb-1" style={{ color: tokens.textPrimary }}>
+          موقع الزيارة
+        </label>
+        <input id="location" {...register("location")} className="w-full h-11 rounded-xl px-3 text-sm outline-none" style={fieldStyle} />
+        {renderError(errors.location?.message)}
+      </div>
+
+      <div>
+        <label htmlFor="observations" className="text-sm font-semibold block mb-1" style={{ color: tokens.textPrimary }}>
+          الملاحظات الميدانية
+        </label>
+        <textarea id="observations" rows={4} {...register("observations")} className="w-full rounded-xl p-3 text-sm outline-none" style={fieldStyle} />
+        {renderError(errors.observations?.message)}
+      </div>
+
+      <div>
+        <label htmlFor="livingConditions" className="text-sm font-semibold block mb-1" style={{ color: tokens.textPrimary }}>
+          ظروف المعيشة
+        </label>
+        <textarea id="livingConditions" rows={3} {...register("livingConditions")} className="w-full rounded-xl p-3 text-sm outline-none" style={fieldStyle} />
+        {renderError(errors.livingConditions?.message)}
+      </div>
+
+      <div>
+        <label htmlFor="eligibilityAssessment" className="text-sm font-semibold block mb-1" style={{ color: tokens.textPrimary }}>
+          تقييم الاستحقاق
+        </label>
+        <select id="eligibilityAssessment" {...register("eligibilityAssessment")} className="w-full h-11 rounded-xl px-3 text-sm outline-none" style={fieldStyle}>
+          <option value="">اختر تقييمًا</option>
+          {ELIGIBILITY_OPTIONS.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+        {renderError(errors.eligibilityAssessment?.message)}
+      </div>
+
+      <div>
+        <label htmlFor="recommendation" className="text-sm font-semibold block mb-1" style={{ color: tokens.textPrimary }}>
+          التوصية
+        </label>
+        <textarea id="recommendation" rows={3} {...register("recommendation")} className="w-full rounded-xl p-3 text-sm outline-none" style={fieldStyle} />
+        {renderError(errors.recommendation?.message)}
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="h-11 px-5 rounded-xl text-sm font-semibold text-white self-start disabled:opacity-60"
+        style={{ background: tokens.primary }}
+      >
+        {isSubmitting ? "جارٍ الحفظ..." : "حفظ التقرير وإنهاء الزيارة"}
       </button>
-
-      <div className="rounded-2xl border p-5 flex flex-wrap items-center gap-6" style={{ background: tokens.card, borderColor: tokens.border }}>
-        <div className="flex-1 min-w-[200px]">
-          <h2 className="text-lg font-bold" style={{ color: tokens.textPrimary }}>{research.code}</h2>
-          <div className="text-xs mt-1" style={{ color: tokens.textSecondary }}>حالة {research.caseCode} · الإصدار #{research.version} · الباحث: {research.researcherName}</div>
-        </div>
-        <StatusBadge label={RESEARCH_STATUS_LABELS_AR[research.approvalStatus]} tone={RESEARCH_STATUS_TONE[research.approvalStatus]} theme={theme} />
-      </div>
-
-      {versions && versions.length > 1 && (
-        <div className="rounded-2xl border p-5" style={{ background: tokens.card, borderColor: tokens.border }}>
-          <h3 className="font-bold mb-3 text-sm" style={{ color: tokens.textPrimary }}>سجل الإصدارات لهذه الحالة</h3>
-          <div className="flex flex-col gap-2">
-            {versions.map((version) => (
-              <div key={version.code} className="flex items-center justify-between text-xs py-2" style={{ borderBottom: `1px solid ${tokens.border}` }}>
-                <span style={{ color: tokens.textPrimary }}>الإصدار #{version.version} · {version.code}</span>
-                <StatusBadge label={RESEARCH_STATUS_LABELS_AR[version.approvalStatus]} tone={RESEARCH_STATUS_TONE[version.approvalStatus]} theme={theme} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-2xl border p-5 flex flex-col gap-4" style={{ background: tokens.card, borderColor: tokens.border }}>
-        {SECTIONS.map((section) => (
-          <div key={section.key}>
-            <div className="text-xs mb-1" style={{ color: tokens.textSecondary }}>{section.label}</div>
-            <div className="text-sm" style={{ color: tokens.textPrimary }}>{String(research[section.key])}</div>
-          </div>
-        ))}
-      </div>
-
-      {isReviewable && (
-        <div className="rounded-2xl border p-5" style={{ background: tokens.card, borderColor: tokens.border }}>
-          <h3 className="font-bold mb-3" style={{ color: tokens.textPrimary }}>قرار المراجعة</h3>
-          <ResearchApprovalPanel
-            theme={theme}
-            isSubmitting={review.isPending}
-            onDecision={(decision, notes) => review.mutate({ researchCode: research.code, decision, reviewNotes: notes })}
-          />
-        </div>
-      )}
-
-      {research.reviewNotes && (
-        <div className="rounded-2xl border p-5" style={{ background: tokens.card, borderColor: tokens.border }}>
-          <div className="text-xs mb-1" style={{ color: tokens.textSecondary }}>ملاحظات المراجعة السابقة</div>
-          <div className="text-sm" style={{ color: tokens.textPrimary }}>{research.reviewNotes}</div>
-        </div>
-      )}
-    </div>
+    </form>
   );
 }
